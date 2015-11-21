@@ -247,8 +247,15 @@ check_version()
     fi
 }
 
+# work out assute path
+abspath() {
+  # $1 : relative filename
+  if [ -d "$(dirname "$1")" ]; then
+    NEWPATH="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
+  fi
+}
 
-
+#
 parse_param()
 {
 
@@ -328,12 +335,14 @@ parse_param()
                     CMD=help
                     ;;
                 # and --flag value opts like this
-                -t  )
-                    WORKING_TREES="$2"
+                -t  ) # Set the build directory
+		    abspath $2
+		    WORKING_TREES=$NEWPATH
                     shift
                     ;;
                 -n  ) # set the install dirctory
-                    INSTALL_DIR="$2"
+		    abspath $2
+                    INSTALL_DIR=$NEWPATH
                     shift
                     ;;
                 -d  )
