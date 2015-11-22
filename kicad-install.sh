@@ -1,6 +1,6 @@
 #!/bin/bash -e
 #Note only int, no 1.30.3.. etc or leters for script version
-SCRIPT_VERSION=3
+SCRIPT_VERSION=4
 # NOTICE: Uncomment if your script depends on bashisms.
 #if [ -z "$BASH_VERSION" ]; then bash $0 $@ ; exit $? ; fi
 
@@ -49,7 +49,7 @@ docpdfgenrator="-DPDF_GENERATOR=DBLATEX"  #FOP or DBLATEX  pad generator
 
 # Set where the 3 source trees will go, use a full path
 #WORKING_TREES=/public/kicad_sources
-working_trees="~/buildkicad"
+working_trees=~/"buildkicad"
 
 #STABLE=5054             # a sensible mix of features and stability
 #TESTING=last:1          # the most recent
