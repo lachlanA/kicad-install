@@ -38,7 +38,6 @@ CPUCOUNT=4
 # is a serious situation.
 CONFIG_FILE=~/".$0.conf"
 KICAD_BUILD_CONFIG_TAG="KICAD_BUILD_CONFIG*"
-WEB_MASTER_KICAD_BUILD_SCRIPT_URL=www.lunchpad.com
 SCRIPT_NAME=kicad-install.sh
 #set this to your sytem or peruser tmp dirctory
 SYSTEM_TMP_DIR="/tmp/"
@@ -102,7 +101,7 @@ DOCS_REPO=$REPOS/~kicad-developers/kicad/doc
 
 
 #WEB_MASTER_KICAD_BUILD_SCRIPT_URL="http://bazaar.launchpad.net/~kicad-product-committers/kicad/product/view/head:/scripts"
-WEB_MASTER_KICAD_BUILD_SCRIPT_URL="https://raw.githubusercontent.com/lachlanA/kicad-install/master/kicad-install.sh"
+WEB_MASTER_KICAD_BUILD_SCRIPT_URL="https://raw.githubusercontent.com/lachlanA/kicad-install/master"
 WEB_MASTER_KICAD_BUILD_SCRIPT_VERSION_URL="http://cosmosc.com/kicad"
 WEB_MASTER_KICAD_BUILD_SCRIPT_SHA512SUM_URL="http://cosmosc.com/kicad"
 ###
@@ -1026,10 +1025,11 @@ fi
 if [ "$CMD" == 'diff-version' ]; then #show diff of web and local
     set +e
     # check for script version file first
-    wget $WGET_OP "$WEB_MASTER_KICAD_BUILD_SCRIPT_VERSION_URL/$SCRIPT_NAME" -O "$SYSTEM_TMP_DIR/$SCRIPT_NAME.$$"
+    wget $WGET_OP "$WEB_MASTER_KICAD_BUILD_SCRIPT_URL/$SCRIPT_NAME" -O "$SYSTEM_TMP_DIR/$SCRIPT_NAME.$$"
     RESULT=$?
     set -e
     if [ $RESULT == 0 ]; then
+	echo $0
 	diff -s "$0" "$SYSTEM_TMP_DIR/$SCRIPT_NAME.$$" | less
     else
 	echo ""
@@ -1038,8 +1038,9 @@ if [ "$CMD" == 'diff-version' ]; then #show diff of web and local
 	echo "********************************************************************************"
 	echo ""
 	echo ""	
-	exit 0
+	exit 1
     fi
+    exit 0
 fi
 
 # --update-version
