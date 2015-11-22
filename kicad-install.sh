@@ -1,6 +1,6 @@
 #!/bin/bash -e
 #Note only int, no 1.30.3.. etc or leters for script version
-SCRIPT_VERSION=2
+SCRIPT_VERSION=3
 # NOTICE: Uncomment if your script depends on bashisms.
 #if [ -z "$BASH_VERSION" ]; then bash $0 $@ ; exit $? ; fi
 
