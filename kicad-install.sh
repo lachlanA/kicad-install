@@ -1,6 +1,6 @@
 #!/bin/bash -e
 #Note only int, no 1.30.3.. etc or leters for script version
-SCRIPT_VERSION=1
+SCRIPT_VERSION=2
 # NOTICE: Uncomment if your script depends on bashisms.
 #if [ -z "$BASH_VERSION" ]; then bash $0 $@ ; exit $? ; fi
 
@@ -50,7 +50,7 @@ docpdfgenrator="-DPDF_GENERATOR=DBLATEX"  #FOP or DBLATEX  pad generator
 
 # Set where the 3 source trees will go, use a full path
 #WORKING_TREES=/public/kicad_sources
-WORKING_TREES=~/buildkicad
+working_trees="~/buildkicad"
 
 #STABLE=5054             # a sensible mix of features and stability
 #TESTING=last:1          # the most recent
@@ -102,7 +102,7 @@ DOCS_REPO=$REPOS/~kicad-developers/kicad/doc
 
 
 #WEB_MASTER_KICAD_BUILD_SCRIPT_URL="http://bazaar.launchpad.net/~kicad-product-committers/kicad/product/view/head:/scripts"
-WEB_MASTER_KICAD_BUILD_SCRIPT_URL="http://cosmosc.com/kicad"
+WEB_MASTER_KICAD_BUILD_SCRIPT_URL="https://raw.githubusercontent.com/lachlanA/kicad-install/master/kicad-install.sh"
 WEB_MASTER_KICAD_BUILD_SCRIPT_VERSION_URL="http://cosmosc.com/kicad"
 WEB_MASTER_KICAD_BUILD_SCRIPT_SHA512SUM_URL="http://cosmosc.com/kicad"
 ###
@@ -122,13 +122,15 @@ BUILD_TYPE=0
 usage()
 {
     echo ""
+    echo " Version $SCRIPT_VERSION kicad-install.sh script for linux"
+    echo ""
     echo " Note: parameters in <> Are required, while parameters in [] are optional, | = OR, IE one in list"
     echo " IE: Build Python add on, needs -p MIN  for minimum version of python."
     echo " Note: This script can self update, using SHA512SUM verification, To over ride Version Check use -V"
     echo " and -S to disable SHA512SUM check. Also a backup copy of the current script will be made in both."
     echo " the script working directory and target working directory format will be script name + date"
     echo " This script must be mark as exectuable by: chmode a+rx $SCRIPT_NAME"
-    echo " If target SOURCE'S director is not set, default will be be = $WORKING_TREES"
+    echo " If target SOURCE'S director is not set, default will be be = $working_trees"
     echo " If Install DIRECTOR is not set, default will be = $INSTALL_DIR"
     echo ""
     echo "  ./kicad-install.sh <cmd> [Options...]"
@@ -147,8 +149,8 @@ usage()
     echo "                                      only update's if newer Note: Use -V to force update )"
     echo "   --diff-server-local-script      ( Show the difference between current and server scripts"
     echo "                                      $SCRIPT_NAME, using diff, Note: With NO! SHA512SUM verification )"
-    echo "   --make-script-sha512            ( Makes 2 files, one with a SHA512SUM in $SCRIPT_NAME_SHA512SUM other"
-    echo "                                      With SCRIP_VERSION=$SCRIPT_VERSION in file $SCRIPT_NAME_VERSION )"
+    echo "   --make-script-sha512            ( Makes 2 files, one with a SHA512SUM in $working_trees/$SCRIPT_NAME_SHA512SUM other"
+    echo "                                      With SCRIP_VERSION in file $working_trees/$SCRIPT_NAME_VERSION )"
     echo "   --clean                         ( Clean build files IE: Frees disk space )"    
     echo "   --delete-build-dir              ( Delete the SOURCE'S/build directory, you may need to do this if"
     echo "                                      build is not working as exepcted )"    
@@ -248,13 +250,65 @@ check_version()
 }
 
 # work out assute path
-abspath() {
-  # $1 : relative filename
-  if [ -d "$(dirname "$1")" ]; then
-    NEWPATH="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
-  fi
+function abspath() {
+    # generate absolute path from relative path
+    # $1     : relative filename
+    # return : absolute path
+    if [ -d "$1" ]; then
+	# dir
+	(cd "$1"; pwd)
+    elif [ -f "$1" ]; then
+	# file
+	if [[ $1 == */* ]]; then
+	    echo "got here1"
+	    newpath="$(cd "${1%/*}"; pwd)/${1##*/}"
+	else
+	    echo "got here2"
+	    newpath="$(pwd)/$1"
+	fi
+    fi
 }
 
+#
+function getabspath {
+    local -a T1 T2
+    local -i I=0
+    local IFS=/ A
+
+    case "$1" in
+	/*)
+	    read -r -a T1 <<< "$1"
+	    ;;
+	*)
+	    read -r -a T1 <<< "/$PWD/$1"
+	    ;;
+    esac
+
+    T2=()
+
+    for A in "${T1[@]}"; do
+	case "$A" in
+	    ..)
+		[[ I -ne 0 ]] && unset T2\[--I\]
+		continue
+		;;
+	    .|'')
+		continue
+		;;
+	esac
+
+	T2[I++]=$A
+    done
+
+    case "$1" in
+	*/)
+	    [[ I -ne 0 ]] && newpath="/${T2[*]}/" || newpath=/
+	    ;;
+	*)
+	    [[ I -ne 0 ]] && newpath="/${T2[*]}" || newpath=/.
+	    ;;
+    esac
+}
 #
 parse_param()
 {
@@ -336,13 +390,13 @@ parse_param()
                     ;;
                 # and --flag value opts like this
                 -t  ) # Set the build directory
-		    abspath $2
-		    WORKING_TREES=$NEWPATH
+		    getabspath $2
+		    working_trees=$newpath
                     shift
                     ;;
                 -n  ) # set the install dirctory
-		    abspath $2
-                    INSTALL_DIR=$NEWPATH
+		    getabspath $2
+                    INSTALL_DIR=$newpath
                     shift
                     ;;
                 -d  )
@@ -639,19 +693,21 @@ install_or_update()
 	echo "step 1) installing pre-requisites"
 	install_prerequisites
 
-	echo "step 2) make $WORKING_TREES if it does not exist"
-	if [ ! -d "$WORKING_TREES" ]; then
-            sudo mkdir -p "$WORKING_TREES"
-            echo " mark $WORKING_TREES as owned by me"
-            sudo chown -R `whoami` "$WORKING_TREES"
+	echo "step 2) make $working_trees if it does not exist"
+	if [ ! -d "$working_trees" ]; then
+            sudo mkdir -p "$working_trees"
+            echo " mark $working_trees as owned by me"
+            sudo chown -R `whoami` "$working_trees"
 	fi
     fi
 
-    if [ ! -d "$WORKING_TREES" ]; then # is build there ?
-	echo "step 2) make $WORKING_TREES if it does not exist"
-        sudo mkdir -p "$WORKING_TREES"
-        echo " mark $WORKING_TREES as owned by me"
-        sudo chown -R `whoami` "$WORKING_TREES"
+    if [ ! -d "$working_trees" ]; then # is build there ?
+	set +e
+	echo "step 2) make $working_trees if it does not exist"
+        sudo mkdir -p "$working_trees"
+        echo " mark $working_trees as owned by me"
+        sudo chown -R `whoami` "$working_trees"
+	set -e
     fi
     
     shopt -s nocasematch    
@@ -665,14 +721,14 @@ install_or_update()
     
     if [ "$BUILD_TYPE" == "0" -o "$BUILD_TYPE" == "1" ]; then
 	echo "step 3) checking out the source code from launchpad repo..."
-	if [ -d "$WORKING_TREES/kicad.bzr" ]; then # is build there ?
-	    if [ -d "$WORKING_TREES/kicad.bzr/build" ]; then # is build there ?
-		if [[ ! -s "$WORKING_TREES/kicad.bzr/build/CMakeCache.txt"  ]]; then # Yes, what about CMakeCache.txt
+	if [ -d "$working_trees/kicad.bzr" ]; then # is build there ?
+	    if [ -d "$working_trees/kicad.bzr/build" ]; then # is build there ?
+		if [[ ! -s "$working_trees/kicad.bzr/build/CMakeCache.txt"  ]]; then # Yes, what about CMakeCache.txt
 		    echo -ne "\n\tFound partly installed, or existing install which is\n\tDamage or CMake has not been run on, you have 3 option\n"
 		    echo -ne "\tX Exit this script(IE do nothing)\n"
 		    echo -ne "\tC Check the sounce tree, (this will take some time!)-\n"
 		    echo -ne "\t  if good, continue, if bad delete, and download new one.\n"
-		    echo -ne "\tD Delete the sournce tree, and download and install new one-\n"
+		    echo -ne "\tD Delete the source tree, and download and install new one-\n"
 		    echo -ne "\t  it may be slow dependingg on your internet and server load\n\n"
 		    echo -ne "Select one of.. C,D,X :"
 		    read asser
@@ -687,22 +743,23 @@ install_or_update()
 				bzr check kicad.bzr
 				if [[ $? != 0 ]]; then 
 				    echo -ne "\n\nSource tree Bad so deleteing old tree, and downlading new one!\n\n"
-				    sudo rm -rf "$WORKING_TREES/kicad_.bzr/*"
-				    bzr checkout -r "$REVISION" "$SRCS_REPO" kicad.bzr
-				    sudo chown -R `whoami` "$WORKING_TREES"		
+				    sudo rm -rf "$working_trees/kicad.bzr"
+				    bzr checkout -r "$REVISION" "$SRCS_REPO" "$working_trees/kicad.bzr"
+				    sudo chown -R `whoami` "$working_trees"		
 				else
 				    echo "Existing install good, so updating."
-				    cd "$WORKING_TREES/kicad.bzr"
+				    cd "$working_trees/kicad.bzr"
 				    bzr up -r "$REVISION"
 				    cd ../
 				    break
 				fi
 				;;
 			    D | d )
-				echo -ne "\n\nDelete existing and over write with source tree!\n\n"
-				sudo rm -rf "$WORKING_TREES/kicad.bzr/*"
-				bzr checkout -r "$REVISION" "$SRCS_REPO" kicad.bzr
-				sudo chown -R `whoami` "$WORKING_TREES"		
+				echo -ne "\n\nDelete existing working tree "$working_trees/*.*" and over write with new source tree!\n\n"
+				sudo rm -rf "$working_trees/kicad.bzr"
+				bzr checkout -r "$REVISION" "$SRCS_REPO" "$working_trees/kicad.bzr"
+				sudo chown -R `whoami` "$working_trees"		
+				echo "woof woof"
 				break
 				;;
 			    *)
@@ -711,59 +768,59 @@ install_or_update()
 			esac
 		    done
 		else # Ok we have CMakeCache.txt so must be hanging round from last build
-		    cd "$WORKING_TREES/kicad.bzr/"
+		    cd "$working_trees/kicad.bzr/"
 		    bzr up -r "$REVISION"
 		    echo " local source working tree updated."
 		    cd ../
 		fi
 	    else # No build directory,  so check sournce's to see if there usable.. 
-		if [ -d "$WORKING_TREES/kicad.bzr/pcbnew/plugin.cpp" ]; then # is build there ?
+		if [ -d "$working_trees/kicad.bzr/pcbnew/plugin.cpp" ]; then # is build there ?
 		    echo -ne "\n\nChecking and will continue if good, abort and delete old tree if bad!\n\n"
-		    bzr check kicad.bzr
+		    bzr check "$working_trees/kicad.bzr"
 		    if [[ $? != 0 ]]; then 
 			echo -ne "\n\nSource tree Bad so deleteing old tree, and downlading new one!\n\n"
-			sudo rm -rf "$WORKING_TREES/kicad_.bzr/*"
-			bzr checkout -r "$REVISION" "$SRCS_REPO" kicad.bzr
-			sudo chown -R `whoami` "$WORKING_TREES"		
+			sudo rm -rf "$working_trees/kicad.bzr"
+			bzr checkout -r "$REVISION" "$SRCS_REPO" "$working_trees/kicad.bzr"
+			sudo chown -R `whoami` "$working_trees"		
 		    else
 			echo "Existing install good, so updating."
-			cd "$WORKING_TREES/kicad.bzr"
+			cd "$working_trees/kicad.bzr"
 			bzr up -r "$REVISION"
 			cd ../
 			break
 		    fi
 		else
 		    echo -ne "\n\nSource tree Not install/or bad so install new one!\n\n"
-		    sudo rm -rf "$WORKING_TREES/kicad.bzr"
-		    if [ ! -d "$WORKING_TREES/kicad.bzr" ]; then
-	     		mkdir "$WORKING_TREES/kicad.bzr"
+		    sudo rm -rf "$working_trees/kicad.bzr"
+		    if [ ! -d "$working_trees/kicad.bzr" ]; then
+	     		mkdir "$working_trees/kicad.bzr"
 		    fi
-		    if [ ! -d "$WORKING_TREES/kicad.bzr/build" ]; then
-	     		mkdir "$WORKING_TREES/kicad.bzr/build"
+		    if [ ! -d "$working_trees/kicad.bzr/build" ]; then
+	     		mkdir "$working_trees/kicad.bzr/build"
 		    fi
-		    bzr checkout -r "$REVISION" "$SRCS_REPO" kicad.bzr
-		    sudo chown -R `whoami` "$WORKING_TREES"		
+		    bzr checkout -r "$REVISION" "$SRCS_REPO" "$working_trees/kicad.bzr"
+		    sudo chown -R `whoami` "$working_trees"		
 		fi
 	    fi
 	else # No kicad.bzr
-	    cd "$WORKING_TREES/"
-	    if [ ! -d "$WORKING_TREES/kicad.bzr" ]; then
-	     	mkdir "$WORKING_TREES/kicad.bzr"
+	    cd "$working_trees/"
+	    if [ ! -d "$working_trees/kicad.bzr" ]; then
+	     	mkdir "$working_trees/kicad.bzr"
 	    fi
-	    if [ ! -d "$WORKING_TREES/kicad.bzr/build" ]; then
-	     	mkdir "$WORKING_TREES/kicad.bzr/build"
+	    if [ ! -d "$working_trees/kicad.bzr/build" ]; then
+	     	mkdir "$working_trees/kicad.bzr/build"
 	    fi
-	    bzr checkout -r "$REVISION" "$SRCS_REPO" "kicad.bzr"
-	    sudo chown -R `whoami` "$WORKING_TREES"		
+	    bzr checkout -r "$REVISION" "$SRCS_REPO" "$working_trees/kicad.bzr"
+	    sudo chown -R `whoami` "$working_trees"		
 	fi
 
 	echo "step 4) checking out the schematic parts and 3D library repo."
-	if [ ! -d "$WORKING_TREES/kicad-lib.bzr" ]; then
-            bzr checkout "$LIBS_REPO" kicad-lib.bzr
-	    sudo chown -R `whoami` "$WORKING_TREES"		
+	if [ ! -d "$working_trees/kicad-lib.bzr" ]; then
+            bzr checkout "$LIBS_REPO" "$working_trees/kicad-lib.bzr"
+	    sudo chown -R `whoami` "$working_trees"		
             echo ' kicad-lib checked out.'
 	else
-            cd "$WORKING_TREES/kicad-lib.bzr"
+            cd "$working_trees/kicad-lib.bzr"
             bzr up
             echo ' kicad-lib repo updated.'
             cd ../
@@ -771,17 +828,17 @@ install_or_update()
 
 	if [ "$DISABLE_DOCS" == "0" ]; then
 	    echo "step 5) checking out the documentation from launchpad repo..."
-	    if [ ! -d "$WORKING_TREES/kicad-doc.git" ]; then
-		mkdir "$WORKING_TREES/kicad-doc.git"
-		sudo chown -R `whoami` "$WORKING_TREES"		
-		cd "$WORKING_TREES/kicad-doc.git"
+	    if [ ! -d "$working_trees/kicad-doc.git" ]; then
+		mkdir "$working_trees/kicad-doc.git"
+		sudo chown -R `whoami` "$working_trees"		
+		cd "$working_trees/kicad-doc.git"
 		git clone https://github.com/KiCad/kicad-doc.git
-		mkdir "$WORKING_TREES/kicad-doc.git/kicad-doc/build"
-		cd "$WORKING_TREES/kicad-doc.git/kicad-doc/build"
+		mkdir "$working_trees/kicad-doc.git/kicad-doc/build"
+		cd "$working_trees/kicad-doc.git/kicad-doc/build"
 		cmake "$OPTS $languages $docformats $docpdfgenrator" ..
 		echo " docs checked out."
 	    else
-		cd "$WORKING_TREES/kicad-doc.git/kicad-doc"
+		cd "$working_trees/kicad-doc.git/kicad-doc"
 		git pull origin master
 		echo " docs working tree updated."
 		cd ../
@@ -799,20 +856,20 @@ install_or_update()
 	#     cd ..
 	# fi
 	local cmake_opts
-	if [ -s "$WORKING_TREES/kicad.bzr/build/CMakeCache.txt.OPTS.last" ]; then     # We have a old build CMake history ?
-	    cmake_opts=$(<"$WORKING_TREES/kicad.bzr/build/CMakeCache.txt.OPTS.last")    # Yes read it then
+	if [ -s "$working_trees/kicad.bzr/build/CMakeCache.txt.OPTS.last" ]; then     # We have a old build CMake history ?
+	    cmake_opts=$(<"$working_trees/kicad.bzr/build/CMakeCache.txt.OPTS.last")    # Yes read it then
 	else
 	    cmake_opts=""  # No history so force clean and CMake build then
 	fi
 #	echo "cmake_opts=$cmake_opts.  OPTS=$OPTS."
 	if [ "$cmake_opts" != "$OPTS" ]; then
-	    cd "$WORKING_TREES/kicad.bzr/build"
+	    cd "$working_trees/kicad.bzr/build"
 	    cmake $OPTS .. || exit 1
-	    echo "$OPTS" >"$WORKING_TREES/kicad.bzr/build/CMakeCache.txt.OPTS.last"
+	    echo "$OPTS" >"$working_trees/kicad.bzr/build/CMakeCache.txt.OPTS.last"
 	    make clean
 	    cd ..
 	fi
-	cd "$WORKING_TREES/kicad.bzr/build"
+	cd "$working_trees/kicad.bzr/build"
 	make -j"$CPUCOUNT" || exit 1
 	echo " kicad compiled."
 	cd ..
@@ -820,7 +877,7 @@ install_or_update()
 
 
     if [ "$BUILD_TYPE" == "0" -o "$BUILD_TYPE" == "1" -o "$BUILD_TYPE" == "2" -o "$BUILD_TYPE" == "3" ]; then
-	cd "$WORKING_TREES/kicad.bzr/build"
+	cd "$working_trees/kicad.bzr/build"
 	echo "step 7) installing KiCad program files..."
 	sudo make install
 	echo " kicad program files installed."
@@ -828,7 +885,7 @@ install_or_update()
     fi
 
     if [ $CMD == "clean" ]; then
-	cd "$WORKING_TREES/kicad.bzr/build"
+	cd "$working_trees/kicad.bzr/build"
 #	echo "Got  here $?"
 	sudo make clean
 	echo ""
@@ -838,7 +895,7 @@ install_or_update()
     fi 
 
     echo "step 8) installing libraries..."
-    cd "$WORKING_TREES/kicad-lib.bzr"
+    cd "$working_trees/kicad-lib.bzr"
     rm_build_dir build
     mkdir build && cd build
     cmake ..
@@ -855,7 +912,7 @@ install_or_update()
 
     if [ "$DISABLE_DOCS" == "0" ]; then
 	echo "step 10) installing documentation..."
-	cd "$WORKING_TREES/kicad-doc.git/kicad-doc/build/"
+	cd "$working_trees/kicad-doc.git/kicad-doc/build/"
 	sudo make install
 	echo " kicad-doc.git installed."
     fi
@@ -930,8 +987,9 @@ else
     fi
 fi
 #
-echo $OS $REV $DIST $KERNEL $MACH
-
+echo ""
+echo "Running on $OS $REV $DIST $KERNEL $MACH"
+echo ""
 parse_param $@
 
 if [ "$CMD" == "" -o "$CMD" == "help" ]; then
@@ -954,12 +1012,12 @@ fi
 
 # Build scrip hash and verson files for server
 if [ "$CMD" == "make-version-hash" ]; then
-    echo "SCRIPT_VERSION=$SCRIPT_VERSION" >"$WORKING_TREES/$SCRIPT_NAME_VERSION"
-    sudo echo "" >>"$WORKING_TREES/$SCRIPT_NAME_VERSION"
-    sudo sha512sum <"$0" >"$WORKING_TREES/$SCRIPT_NAME_SHA512SUM"
+    echo "SCRIPT_VERSION=$SCRIPT_VERSION" >"$working_trees/$SCRIPT_NAME_VERSION"
+    sudo echo "" >>"$working_trees/$SCRIPT_NAME_VERSION"
+    sudo sha512sum <"$0" >"$working_trees/$SCRIPT_NAME_SHA512SUM"
     echo ""
-    echo "New SHA512 Hash file for $SCRIPT_NAME is at $WORKING_TREES/$SCRIPT_NAME_SHA512SUM"
-    echo "New Version file for $SCRIPT_NAME is at $WORKING_TREES/$SCRIPT_NAME_VERSION"
+    echo "New SHA512 Hash file for $SCRIPT_NAME is at $working_trees/$SCRIPT_NAME_SHA512SUM"
+    echo "New Version file for $SCRIPT_NAME is at $working_trees/$SCRIPT_NAME_VERSION"
     echo ""
     exit 0
 fi
@@ -1067,7 +1125,7 @@ if [ "$CMD" == "update-version" ]; then #update current to version on server if 
 
     if [ "$RESULT" == 0 ]; then
 	cp "$0" "$0.backup.$(date +y%Ym%md%dh%Hm%Ms%S)" && true
-	cp "$0" "$WORKING_TREES/$WORKING$0.backup.$(date +y%Ym%md%dh%Hm%Ms%S)" && true
+	cp "$0" "$working_trees/$WORKING$0.backup.$(date +y%Ym%md%dh%Hm%Ms%S)" && true
 	RESULT=$?
 	if [ "$RESULT" != 0 ]; then
 	    echo "Could not back up old script $0 before overwriting with new version of script, update aborted!"
@@ -1146,16 +1204,15 @@ if [ "$CMD" == "install-or-update-build-tools" ]; then
     exit 0
 fi
 	   
-
 #remove sounces
 if [ "$CMD" == "remove-sources" ]; then
-    echo "deleting $WORKING_TREES"
-    rm_build_dir "$WORKING_TREES/kicad.bzr/build"
-    rm_build_dir "$WORKING_TREES/kicad-lib.bzr/build"
-    if [ -d "$WORKING_TREES/kicad-doc.bzr/build" ]; then # check for installed doc's first
-	rm_build_dir "$WORKING_TREES/kicad-doc.bzr/build"
+    echo "deleting $working_trees"
+    rm_build_dir "$working_trees/kicad.bzr/build"
+    rm_build_dir "$working_trees/kicad-lib.bzr/build"
+    if [ -d "$working_trees/kicad-doc.bzr/build" ]; then # check for installed doc's first
+	rm_build_dir "$working_trees/kicad-doc.bzr/build"
     fi
-    sudo rm -rf "$WORKING_TREES"
+    sudo rm -rf "$working_trees"
     echo ""
     echo "remove-sources compelete"
     echo ""
@@ -1177,24 +1234,24 @@ fi
 
 #uninstall libraries
 if [ "$CMD" == "uninstall-libraries" ]; then
-    cd "$WORKING_TREES/kicad-lib.bzr/build"
-    cmake_uninstall "$WORKING_TREES/kicad-lib.bzr/build"
+    cd "$working_trees/kicad-lib.bzr/build"
+    cmake_uninstall "$working_trees/kicad-lib.bzr/build"
     exit 0
 fi
 
 
 #uninstall all
 if [ "$CMD" == "uninstall-kicad" ]; then
-    cd "$WORKING_TREES/kicad.bzr/build"
-    cmake_uninstall "$WORKING_TREES/kicad.bzr/build" 
+    cd "$working_trees/kicad.bzr/build"
+    cmake_uninstall "$working_trees/kicad.bzr/build" 
 
-    cd "$WORKING_TREES/kicad-lib.bzr/build"
-    cmake_uninstall "$WORKING_TREES/kicad-lib.bzr/build"
+    cd "$working_trees/kicad-lib.bzr/build"
+    cmake_uninstall "$working_trees/kicad-lib.bzr/build"
 
     # this may fail since "uninstall" support is a recent feature of this repo:
-    if [ -d "$WORKING_TREES/kicad-doc.bzr/build" ]; then # check for installed doc's first
-	cd "$WORKING_TREES/kicad-doc.bzr/build"
-	cmake_uninstall "$WORKING_TREES/kicad-doc.bzr/build"
+    if [ -d "$working_trees/kicad-doc.bzr/build" ]; then # check for installed doc's first
+	cd "$working_trees/kicad-doc.bzr/build"
+	cmake_uninstall "$working_trees/kicad-doc.bzr/build"
     fi
     exit 0
 fi
@@ -1211,7 +1268,7 @@ fi
 
 # remove build directory
 if [ $CMD == "delete-build-dir" ]; then
-    rm_build_dir "$WORKING_TREES/kicad.bzr/build"
+    rm_build_dir "$working_trees/kicad.bzr/build"
     exit 0
 fi 
 
