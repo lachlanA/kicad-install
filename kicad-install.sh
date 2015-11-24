@@ -97,7 +97,8 @@ REPOS=https://code.launchpad.net
 LIBS_REPO=$REPOS/~kicad-product-committers/kicad/library
 
 SRCS_REPO=$REPOS/~kicad-product-committers/kicad/product
-DOCS_REPO=$REPOS/~kicad-developers/kicad/doc
+#DOCS_REPO=$REPOS/~kicad-developers/kicad/doc
+DOCS_REPO="https://github.com/KiCad/kicad-doc.git"
 
 
 #WEB_MASTER_KICAD_BUILD_SCRIPT_URL="http://bazaar.launchpad.net/~kicad-product-committers/kicad/product/view/head:/scripts"
@@ -831,7 +832,7 @@ install_or_update()
 		mkdir "$working_trees/kicad-doc.git"
 		sudo chown -R `whoami` "$working_trees"		
 		cd "$working_trees/kicad-doc.git"
-		git clone https://github.com/KiCad/kicad-doc.git
+		git clone $DOCS_REPO
 		mkdir "$working_trees/kicad-doc.git/kicad-doc/build"
 		cd "$working_trees/kicad-doc.git/kicad-doc/build"
 		cmake "$OPTS $languages $docformats $docpdfgenrator" ..
