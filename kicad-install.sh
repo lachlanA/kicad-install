@@ -25,7 +25,7 @@
 #
 # 
 #Note only int, no 1.30.3.. etc or leters for script version#
-SCRIPT_VERSION=5
+SCRIPT_VERSION=6
 # NOTICE: Uncomment if your script depends on bashisms.
 #if [ -z "$BASH_VERSION" ]; then bash $0 $@ ; exit $? ; fi
 
@@ -140,8 +140,9 @@ SCRIPT_NAME_VERSION=$(basename "$0").version
 SCRIPT_NAME_SHA512SUM=$(basename "$0").sha512
 SYSTEM_TMP_DIR="/tmp"
 
-#WGET_OP="--wait=10 --no-proxy -q"
-WGET_OP="--wait=10 --no-proxy"
+wget_op="--wait=10 --no-proxy -q"
+wget_op_progress="--wait=10 --no-proxy"
+#wget_op="--wait=10 --no-proxy"
 CMD=""
 DEBUG=0
 DISABLE_DOCS=0
@@ -223,7 +224,7 @@ check_version()
     if [ "$DISABLE_VERSION_CHECK" != 1 ]; then
 	set +e
 	# check for script version file first
-	wget $WGET_OP "$WEB_MASTER_KICAD_BUILD_SCRIPT_VERSION_URL/$SCRIPT_NAME_VERSION" -O "$SYSTEM_TMP_DIR/$SCRIPT_NAME_VERSION.$$"
+	wget $wget_op "$WEB_MASTER_KICAD_BUILD_SCRIPT_VERSION_URL/$SCRIPT_NAME_VERSION" -O "$SYSTEM_TMP_DIR/$SCRIPT_NAME_VERSION.$$"
 	RESULT=$?
 	set -e
 	if [ "$RESULT" != 0 ]; then
@@ -234,14 +235,14 @@ check_version()
 # check for script SHA512SUM file
     if [ "$DISABLE_SHA512SUM" != 1 ]; then
 	set +e
-	wget $WGET_OP "$WEB_MASTER_KICAD_BUILD_SCRIPT_SHA512SUM_URL/$SCRIPT_NAME_SHA512SUM" -O "$SYSTEM_TMP_DIR/$SCRIPT_NAME_SHA512SUM.$$"
+	wget $wget_op "$WEB_MASTER_KICAD_BUILD_SCRIPT_SHA512SUM_URL/$SCRIPT_NAME_SHA512SUM" -O "$SYSTEM_TMP_DIR/$SCRIPT_NAME_SHA512SUM.$$"
 	RESULT=$?
 	set -e
 
 
 	if [ "$RESULT" == 0 ]; then  #Ok found hash so now download script
 	    set +e
-	    wget $WGET_OP "$WEB_MASTER_KICAD_BUILD_SCRIPT_URL/$SCRIPT_NAME" -O "$SYSTEM_TMP_DIR/$SCRIPT_NAME.$$"
+	    wget $wget_op "$WEB_MASTER_KICAD_BUILD_SCRIPT_URL/$SCRIPT_NAME" -O "$SYSTEM_TMP_DIR/$SCRIPT_NAME.$$"
 	    RESULT=$?
 	    set -e
 	    if [ "$RESULT" == 0 ]; then #good ?
@@ -864,7 +865,7 @@ install_or_update()
 		mkdir "$SYSTEM_TMP_DIR/"`whoami`".$$"
 		pushd .  #save our current locasion
 		cd "$SYSTEM_TMP_DIR/"`whoami`".$$"
-		wget $WGET_OP "$DOCS_REPO_ALREADY_BUILD"
+		wget $wget_op_progress "$DOCS_REPO_ALREADY_BUILD"
 		tar xvzf $(basename "$DOCS_REPO_ALREADY_BUILD")
                 cd kicad-doc-unknown
 		sudo cp -vr share/* "$INSTALL_DIR/share/"
@@ -1069,7 +1070,7 @@ fi
 if [ "$CMD" == 'diff-version' ]; then #show diff of web and local
     set +e
     # check for script version file first
-    wget $WGET_OP "$WEB_MASTER_KICAD_BUILD_SCRIPT_URL/$SCRIPT_NAME" -O "$SYSTEM_TMP_DIR/$SCRIPT_NAME.$$"
+    wget $wget_op "$WEB_MASTER_KICAD_BUILD_SCRIPT_URL/$SCRIPT_NAME" -O "$SYSTEM_TMP_DIR/$SCRIPT_NAME.$$"
     RESULT=$?
     set -e
     if [ $RESULT == 0 ]; then
@@ -1151,7 +1152,7 @@ if [ "$CMD" == "update-version" ]; then #update current to version on server if 
   
     if [ "$DISABLE_SHA512SUM" == 1 ]; then #We dont have the version so download it
 	set +e       
-	wget $WGET_OP "$WEB_MASTER_KICAD_BUILD_SCRIPT_VERSION_URL/$SCRIPT_NAME" -O "$SYSTEM_TMP_DIR/$SCRIPT_NAME.$$"
+	wget $wget_op "$WEB_MASTER_KICAD_BUILD_SCRIPT_VERSION_URL/$SCRIPT_NAME" -O "$SYSTEM_TMP_DIR/$SCRIPT_NAME.$$"
 	local rs=$?
 	set -e
 	if [ "$rs" != 0 ]; then
