@@ -1,7 +1,7 @@
 # kicad-install
   ***kicad-install.sh bash script script***  
 
-    Version 2 kicad-install.sh script for linux
+    Version 6 kicad-install.sh script for linux
     
     Note: parameters in <> Are required, while parameters in [] are optional, | = OR, IE
 	 one in list  
@@ -55,6 +55,7 @@
           [-n INSTALLBINDIR]     ( Set Install directory for bin NOTE: if you change the install director )  
           [-d ]                  ( Build GDB debug version )  
           [-D ]                  ( Disable Documents Build )  
+          [-B ]                  ( Use prebuild doc's,  this save's a lot of time if you only wont to install the docs! )
           [-r ]                  ( Build version, Set this to STABLE or TESTING or other known revision number 5054 etc )  
           [-S ]                  ( Disable SHA512SUM verification )  
           [-V ]                  ( Disable version check )  
