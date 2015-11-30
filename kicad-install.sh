@@ -1,6 +1,31 @@
 #!/bin/bash -e
-#Note only int, no 1.30.3.. etc or leters for script version
-SCRIPT_VERSION=4
+#
+# This program source code file is part of KiCad, a free EDA CAD application.
+#
+# Copyright (C) 2012 SoftPLC Corporation, Dick Hollenbeck <dick@softplc.com>
+# Copyright (C) 2012-2015 KiCad Developers, see change_log.txt for contributors.
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, you may find one here:
+# http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
+# or you may search the http://www.gnu.org website for the version 2 license,
+# or you may write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
+#
+#
+# 
+#Note only int, no 1.30.3.. etc or leters for script version#
+SCRIPT_VERSION=5
 # NOTICE: Uncomment if your script depends on bashisms.
 #if [ -z "$BASH_VERSION" ]; then bash $0 $@ ; exit $? ; fi
 
@@ -30,7 +55,7 @@ SCRIPT_VERSION=4
 #  bzr-git seems not up to the task.  wget or curl would also work.
 
 # set number of cpus for make, if you have them use them !
-CPUCOUNT=4 
+CPUCOUNT=5 
 
 # Since bash is invoked with -e by the first line of this script, all the steps in this script
 # must succeed otherwise bash will abort at the first non-zero error code.  Therefore any script
@@ -97,9 +122,12 @@ REPOS=https://code.launchpad.net
 LIBS_REPO=$REPOS/~kicad-product-committers/kicad/library
 
 SRCS_REPO=$REPOS/~kicad-product-committers/kicad/product
-#DOCS_REPO=$REPOS/~kicad-developers/kicad/doc
+#Doc's sournce
 DOCS_REPO="https://github.com/KiCad/kicad-doc.git"
-
+#Doc's prebuild source
+DOCS_REPO_ALREADY_BUILD="http://docs.kicad-pcb.org/kicad-doc-unknown.tar.gz"
+#install prebuild docs, save compile time
+INSTALL_PREBUILD_DOCS=0
 
 #WEB_MASTER_KICAD_BUILD_SCRIPT_URL="http://bazaar.launchpad.net/~kicad-product-committers/kicad/product/view/head:/scripts"
 WEB_MASTER_KICAD_BUILD_SCRIPT_URL="https://raw.githubusercontent.com/lachlanA/kicad-install/master"
@@ -112,8 +140,8 @@ SCRIPT_NAME_VERSION=$(basename "$0").version
 SCRIPT_NAME_SHA512SUM=$(basename "$0").sha512
 SYSTEM_TMP_DIR="/tmp"
 
-WGET_OP="--wait=10 --no-proxy -q"
-#WGET_OP="--wait=10 --no-proxy"
+#WGET_OP="--wait=10 --no-proxy -q"
+WGET_OP="--wait=10 --no-proxy"
 CMD=""
 DEBUG=0
 DISABLE_DOCS=0
@@ -163,6 +191,7 @@ usage()
     echo "      [-n INSTALLBINDIR]     ( Set Install directory for bin NOTE: if you change the install director )"
     echo "      [-d ]                  ( Build GDB debug version )"
     echo "      [-D ]                  ( Disable Documents Build )"
+    echo "      [-B ]                  ( Use prebuild doc's,  this save's a lot of time if you only wont to install the docs! )"
     echo "      [-r ]                  ( Build version, Set this to STABLE or TESTING or other known revision number 5054 etc )"
     echo "      [-S ]                  ( Disable SHA512SUM verification )"
     echo "      [-V ]                  ( Disable version check )"
@@ -409,6 +438,9 @@ parse_param()
                 -D  ) # disable Docments build
                     DISABLE_DOCS=1
                     ;;
+                -B  ) # download Prebuild Docs
+                    INSTALL_PREBUILD_DOCS=1
+                    ;;
                 -r  ) # Set version to build
                     REVISION=$2
 		    shift
@@ -430,7 +462,7 @@ parse_param()
             esac
             # Check for multiple short options
             # NOTICE: be sure to update this pattern to match valid options
-            NEXTOPT="${OPT#-[dSVD]}" # try removing single short opt
+            NEXTOPT="${OPT#-[dSVDB]}" # try removing single short opt
             if [ x"$OPT" != x"$NEXTOPT" ] ; then
                 OPT="-$NEXTOPT"  # multiple short opts, keep going
             else
@@ -828,20 +860,31 @@ install_or_update()
 
 	if [ "$DISABLE_DOCS" == "0" ]; then
 	    echo "step 5) checking out the documentation from launchpad repo..."
-	    if [ ! -d "$working_trees/kicad-doc.git" ]; then
-		mkdir "$working_trees/kicad-doc.git"
-		sudo chown -R `whoami` "$working_trees"		
-		cd "$working_trees/kicad-doc.git"
-		git clone $DOCS_REPO
-		mkdir "$working_trees/kicad-doc.git/kicad-doc/build"
-		cd "$working_trees/kicad-doc.git/kicad-doc/build"
-		cmake "$OPTS $languages $docformats $docpdfgenrator" ..
-		echo " docs checked out."
+	    if [ "$INSTALL_PREBUILD_DOCS" == 1 ]; then
+		mkdir "$SYSTEM_TMP_DIR/"`whoami`".$$"
+		pushd .  #save our current locasion
+		cd "$SYSTEM_TMP_DIR/"`whoami`".$$"
+		wget $WGET_OP "$DOCS_REPO_ALREADY_BUILD"
+		tar xvzf $(basename "$DOCS_REPO_ALREADY_BUILD")
+                cd kicad-doc-unknown
+		sudo cp -vr share/* "$INSTALL_DIR/share/"
+		popd   #get it back
 	    else
-		cd "$working_trees/kicad-doc.git/kicad-doc"
-		git pull origin master
-		echo " docs working tree updated."
-		cd ../
+		if [ ! -d "$working_trees/kicad-doc.git" ]; then
+		    mkdir "$working_trees/kicad-doc.git"
+		    sudo chown -R `whoami` "$working_trees"		
+		    cd "$working_trees/kicad-doc.git"
+		    git clone $DOCS_REPO
+		    mkdir "$working_trees/kicad-doc.git/kicad-doc/build"
+		    cd "$working_trees/kicad-doc.git/kicad-doc/build"
+		    cmake "$OPTS $languages $docformats $docpdfgenrator" ..
+		    echo " docs checked out."
+		else
+		    cd "$working_trees/kicad-doc.git/kicad-doc"
+		    git pull origin master
+		    echo " docs working tree updated."
+		    cd ../
+		fi
 	    fi
 	fi
     fi
@@ -910,7 +953,7 @@ install_or_update()
         echo " global fp-lib-table installed."
     fi
 
-    if [ "$DISABLE_DOCS" == "0" ]; then
+    if [ "$DISABLE_DOCS" == "0" -a "$INSTALL_PREBUILD_DOCS" == 0 ]; then
 	echo "step 10) installing documentation..."
 	cd "$working_trees/kicad-doc.git/kicad-doc/build/"
 	sudo make install
