@@ -25,7 +25,7 @@
 #
 # 
 #Note only int, no 1.30.3.. etc or leters for script version#
-SCRIPT_VERSION=7
+SCRIPT_VERSION=8
 # NOTICE: Uncomment if your script depends on bashisms.
 #if [ -z "$BASH_VERSION" ]; then bash $0 $@ ; exit $? ; fi
 
@@ -146,6 +146,7 @@ wget_op_progress="--wait=10 --no-proxy"
 CMD=""
 DEBUG=0
 DISABLE_DOCS=0
+disable_parts_lib_build=0
 BUILD_TYPE=0
 
 usage()
@@ -192,6 +193,7 @@ usage()
     echo "      [-n INSTALLBINDIR]     ( Set Install directory for bin NOTE: if you change the install director )"
     echo "      [-d ]                  ( Build GDB debug version )"
     echo "      [-D ]                  ( Disable Documents Build )"
+    echo "      [-L ]                  ( Disable Parts sch/pcb/3d libs Build )"    
     echo "      [-B ]                  ( Use prebuild doc's,  this save's a lot of time if you only wont to install the docs! )"
     echo "      [-r ]                  ( Build version, Set this to STABLE or TESTING or other known revision number 5054 etc )"
     echo "      [-S ]                  ( Disable SHA512SUM verification )"
@@ -442,7 +444,10 @@ parse_param()
                 -B  ) # download Prebuild Docs
                     INSTALL_PREBUILD_DOCS=1
                     ;;
-                -r  ) # Set version to build
+		-L  ) # Disable Parts sch/pcb/3d libs Build )"    
+                    disable_parts_lib_build=1
+		    ;;
+		-r  ) # Set version to build
                     REVISION=$2
 		    shift
                     ;;
@@ -847,18 +852,23 @@ install_or_update()
 	    bzr checkout -r "$REVISION" "$SRCS_REPO" "$working_trees/kicad.bzr"
 	fi
 
-	echo "step 4) checking out the schematic parts and 3D library repo."
-	if [ ! -d "$working_trees/kicad-lib.bzr" ]; then
-	    sudo chown -R `whoami`:`whoami` "$working_trees"
-            bzr checkout "$LIBS_REPO" "$working_trees/kicad-lib.bzr"
-            echo ' kicad-lib checked out.'
+	if [ "$disable_parts_lib_build" == 0 ]; then
+	    echo "step 4) checking out the schematic parts and 3D library repo."
+	    if [ ! -d "$working_trees/kicad-lib.bzr" ]; then
+		sudo chown -R `whoami`:`whoami` "$working_trees"
+		bzr checkout "$LIBS_REPO" "$working_trees/kicad-lib.bzr"
+		echo ' kicad-lib checked out.'
+	    else
+		cd "$working_trees/kicad-lib.bzr"
+		bzr up
+		echo ' kicad-lib repo updated.'
+		cd ../
+	    fi
 	else
-            cd "$working_trees/kicad-lib.bzr"
-            bzr up
-            echo ' kicad-lib repo updated.'
-            cd ../
+	    echo "step 4) NO PARTS LIBS BUILD!"
 	fi
-
+	
+	
 	if [ "$DISABLE_DOCS" == "0" ]; then
 	    echo "step 5) checking out the documentation from launchpad repo..."
 	    if [ "$INSTALL_PREBUILD_DOCS" == 1 ]; then
@@ -888,6 +898,8 @@ install_or_update()
 		    cd ../
 		fi
 	    fi
+	else
+	    echo "step 5) ********* NO DOC'S BUILD ! *********"
 	fi
     fi
 
@@ -939,16 +951,19 @@ install_or_update()
 	return
     fi 
 
-    echo "step 8) installing libraries..."
-    cd "$working_trees/kicad-lib.bzr"
-    rm_build_dir build
-    sudo mkdir build
-    sudo chown -R `whoami`:`whoami` "$working_trees"		
-    cd "$working_trees/kicad-lib.bzr/build"
-    cmake ..
-    sudo make install
-    echo " kicad-lib.bzr installed."
-
+    if [ "$disable_parts_lib_build" == 0 ]; then
+	echo "step 8) installing libraries..."
+	cd "$working_trees/kicad-lib.bzr"
+	rm_build_dir build
+	sudo mkdir build
+	sudo chown -R `whoami`:`whoami` "$working_trees"		
+	cd "$working_trees/kicad-lib.bzr/build"
+	cmake ..
+	sudo make install
+	echo " kicad-lib.bzr installed."
+    else
+	echo " ********* No libs installed installed ! *********"
+    fi
 
     echo "step 9) as non-root, install global fp-lib-table if none already installed..."
     # install ~/fp-lib-table
@@ -962,6 +977,8 @@ install_or_update()
 	cd "$working_trees/kicad-doc.git/kicad-doc/build/"
 	sudo make install
 	echo " kicad-doc.git installed."
+    else
+	echo " No Doc's installed!"
     fi
     
     echo "step 11) check for environment variables..."
@@ -1296,8 +1313,12 @@ fi
 
 #uninstall libraries
 if [ "$CMD" == "uninstall-libraries" ]; then
-    cd "$working_trees/kicad-lib.bzr/build"
-    cmake_uninstall "$working_trees/kicad-lib.bzr/build"
+    if [ -d "$working_trees/kicad-lib.bzr/build" ]; then
+	cd "$working_trees/kicad-lib.bzr/build"
+	cmake_uninstall "$working_trees/kicad-lib.bzr/build"
+    else
+	echo "No $working_trees/kicad-lib.bzr/build libs to remove!"
+    fi
     exit 0
 fi
 
@@ -1307,9 +1328,13 @@ if [ "$CMD" == "uninstall-kicad" ]; then
     cd "$working_trees/kicad.bzr/build"
     cmake_uninstall "$working_trees/kicad.bzr/build" 
 
-    cd "$working_trees/kicad-lib.bzr/build"
-    cmake_uninstall "$working_trees/kicad-lib.bzr/build"
-
+    if [ -d "$working_trees/kicad-lib.bzr/build" ]; then
+	cd "$working_trees/kicad-lib.bzr/build"
+	cmake_uninstall "$working_trees/kicad-lib.bzr/build"
+    else
+	echo "No $working_trees/kicad-lib.bzr/build libs to remove!"
+    fi
+    
     # this may fail since "uninstall" support is a recent feature of this repo:
     if [ -d "$working_trees/kicad-doc.bzr/build" ]; then # check for installed doc's first
 	cd "$working_trees/kicad-doc.bzr/build"
