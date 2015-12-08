@@ -25,7 +25,7 @@
 #
 # 
 #Note only int, no 1.30.3.. etc or leters for script version#
-SCRIPT_VERSION=6
+SCRIPT_VERSION=7
 # NOTICE: Uncomment if your script depends on bashisms.
 #if [ -z "$BASH_VERSION" ]; then bash $0 $@ ; exit $? ; fi
 
@@ -730,7 +730,7 @@ install_or_update()
 	if [ ! -d "$working_trees" ]; then
             sudo mkdir -p "$working_trees"
             echo " mark $working_trees as owned by me"
-            sudo chown -R `whoami` "$working_trees"
+            sudo chown -R `whoami`:`whoami` "$working_trees"
 	fi
     fi
 
@@ -739,7 +739,7 @@ install_or_update()
 	echo "step 2) make $working_trees if it does not exist"
         sudo mkdir -p "$working_trees"
         echo " mark $working_trees as owned by me"
-        sudo chown -R `whoami` "$working_trees"
+        sudo chown -R `whoami`:`whoami` "$working_trees"
 	set -e
     fi
     
@@ -778,7 +778,7 @@ install_or_update()
 				    echo -ne "\n\nSource tree Bad so deleteing old tree, and downlading new one!\n\n"
 				    sudo rm -rf "$working_trees/kicad.bzr"
 				    bzr checkout -r "$REVISION" "$SRCS_REPO" "$working_trees/kicad.bzr"
-				    sudo chown -R `whoami` "$working_trees"		
+				    sudo chown -R `whoami`:`whoami` "$working_trees"		
 				else
 				    echo "Existing install good, so updating."
 				    cd "$working_trees/kicad.bzr"
@@ -791,8 +791,7 @@ install_or_update()
 				echo -ne "\n\nDelete existing working tree "$working_trees/*.*" and over write with new source tree!\n\n"
 				sudo rm -rf "$working_trees/kicad.bzr"
 				bzr checkout -r "$REVISION" "$SRCS_REPO" "$working_trees/kicad.bzr"
-				sudo chown -R `whoami` "$working_trees"		
-				echo "woof woof"
+				sudo chown -R `whoami`:`whoami` "$working_trees"		
 				break
 				;;
 			    *)
@@ -814,7 +813,7 @@ install_or_update()
 			echo -ne "\n\nSource tree Bad so deleteing old tree, and downlading new one!\n\n"
 			sudo rm -rf "$working_trees/kicad.bzr"
 			bzr checkout -r "$REVISION" "$SRCS_REPO" "$working_trees/kicad.bzr"
-			sudo chown -R `whoami` "$working_trees"		
+			sudo chown -R `whoami`:`whoami` "$working_trees"		
 		    else
 			echo "Existing install good, so updating."
 			cd "$working_trees/kicad.bzr"
@@ -826,31 +825,32 @@ install_or_update()
 		    echo -ne "\n\nSource tree Not install/or bad so install new one!\n\n"
 		    sudo rm -rf "$working_trees/kicad.bzr"
 		    if [ ! -d "$working_trees/kicad.bzr" ]; then
-	     		mkdir "$working_trees/kicad.bzr"
+	     		sudo mkdir "$working_trees/kicad.bzr"
 		    fi
 		    if [ ! -d "$working_trees/kicad.bzr/build" ]; then
-	     		mkdir "$working_trees/kicad.bzr/build"
+	     		sudo mkdir "$working_trees/kicad.bzr/build"
 		    fi
+		    sudo chown -R `whoami`:`whoami` "$working_trees"		
 		    bzr checkout -r "$REVISION" "$SRCS_REPO" "$working_trees/kicad.bzr"
-		    sudo chown -R `whoami` "$working_trees"		
+
 		fi
 	    fi
 	else # No kicad.bzr
 	    cd "$working_trees/"
 	    if [ ! -d "$working_trees/kicad.bzr" ]; then
-	     	mkdir "$working_trees/kicad.bzr"
+	     	sudo mkdir "$working_trees/kicad.bzr"
 	    fi
 	    if [ ! -d "$working_trees/kicad.bzr/build" ]; then
-	     	mkdir "$working_trees/kicad.bzr/build"
+	     	sudo mkdir "$working_trees/kicad.bzr/build"
 	    fi
+	    sudo chown -R `whoami`:`whoami` "$working_trees"
 	    bzr checkout -r "$REVISION" "$SRCS_REPO" "$working_trees/kicad.bzr"
-	    sudo chown -R `whoami` "$working_trees"		
 	fi
 
 	echo "step 4) checking out the schematic parts and 3D library repo."
 	if [ ! -d "$working_trees/kicad-lib.bzr" ]; then
+	    sudo chown -R `whoami`:`whoami` "$working_trees"
             bzr checkout "$LIBS_REPO" "$working_trees/kicad-lib.bzr"
-	    sudo chown -R `whoami` "$working_trees"		
             echo ' kicad-lib checked out.'
 	else
             cd "$working_trees/kicad-lib.bzr"
@@ -872,11 +872,12 @@ install_or_update()
 		popd   #get it back
 	    else
 		if [ ! -d "$working_trees/kicad-doc.git" ]; then
-		    mkdir "$working_trees/kicad-doc.git"
-		    sudo chown -R `whoami` "$working_trees"		
+		    sudo mkdir "$working_trees/kicad-doc.git"
+		    sudo chown -R `whoami`:`whoami` "$working_trees"		
 		    cd "$working_trees/kicad-doc.git"
 		    git clone $DOCS_REPO
 		    mkdir "$working_trees/kicad-doc.git/kicad-doc/build"
+		    sudo chown -R `whoami`:`whoami` "$working_trees"		
 		    cd "$working_trees/kicad-doc.git/kicad-doc/build"
 		    cmake "$OPTS $languages $docformats $docpdfgenrator" ..
 		    echo " docs checked out."
@@ -941,7 +942,9 @@ install_or_update()
     echo "step 8) installing libraries..."
     cd "$working_trees/kicad-lib.bzr"
     rm_build_dir build
-    mkdir build && cd build
+    sudo mkdir build
+    sudo chown -R `whoami`:`whoami` "$working_trees"		
+    cd "$working_trees/kicad-lib.bzr/build"
     cmake ..
     sudo make install
     echo " kicad-lib.bzr installed."
@@ -981,6 +984,8 @@ lowercase(){
 lowercase(){
     echo "$1" | sed "y/ABCDEFGHIJKLMNOPQRSTUVWXYZ/abcdefghijklmnopqrstuvwxyz/"
 }
+
+# ****  Main *****
 # work out the OS you have
 OS=`lowercase \`uname\``
 KERNEL=`uname -r`
@@ -1034,6 +1039,8 @@ fi
 echo ""
 echo "Running on $OS $REV $DIST $KERNEL $MACH"
 echo ""
+
+#Scan command line arments
 parse_param $@
 
 if [ "$CMD" == "" -o "$CMD" == "help" ]; then
@@ -1041,12 +1048,21 @@ if [ "$CMD" == "" -o "$CMD" == "help" ]; then
     exit 0
 fi
 
+#show version and exit    
 if [ "$CMD" == "version" ]; then
     echo ""
     echo " $SCRIPT_NAME File SCRIPT_VERSION=$SCRIPT_VERSION"
     echo ""
     exit 0
 fi
+
+
+# Check for working tree, and make sure We own it!
+# As it may be have Build by some other user!
+if [ -d "$working_trees" ]; then
+    sudo chown -R `whoami`:`whoami` "$working_trees"
+fi
+
 
 # Read config file
 if [ -r "$CONFIG_FILE" -a -s "$CONFIG_FILE"  ]; then
