@@ -1,7 +1,7 @@
 # kicad-install
   ***kicad-install.sh bash script script***  
 
-    Version 6 kicad-install.sh script for linux
+    Version 10 kicad-install.sh script for linux
     
     Note: parameters in <> Are required, while parameters in [] are optional, | = OR, IE
 	 one in list  
@@ -57,7 +57,8 @@
           [-D ]                  ( Disable Documents Build )  
 		  [-L ]                  ( Disable Parts sch/pcb/3d libs Build )
 		  [-B ]                  ( Use prebuild doc's,  this save's a lot of time if you only wont to install the docs! )
-          [-r ]                  ( Build version, Set this to STABLE or TESTING or other known revision number 5054 etc )  
+          [-b ]                  ( Build our own copy of Boost libs )
+		  [-r ]                  ( Build version, Set this to STABLE or TESTING or other known revision number 5054 etc )  
           [-S ]                  ( Disable SHA512SUM verification )  
           [-V ]                  ( Disable version check )  
           [-p MIN | MED | MAX ]  ( Build python MIN=For footprint wizards, MED=creates a python module, )  
