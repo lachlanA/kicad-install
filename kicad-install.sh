@@ -25,7 +25,7 @@
 #
 # 
 #Note only int, no 1.30.3.. etc or leters for script version#
-SCRIPT_VERSION=8
+SCRIPT_VERSION=10
 # NOTICE: Uncomment if your script depends on bashisms.
 #if [ -z "$BASH_VERSION" ]; then bash $0 $@ ; exit $? ; fi
 
@@ -55,7 +55,7 @@ SCRIPT_VERSION=8
 #  bzr-git seems not up to the task.  wget or curl would also work.
 
 # set number of cpus for make, if you have them use them !
-CPUCOUNT=5 
+CPUCOUNT=5
 
 # Since bash is invoked with -e by the first line of this script, all the steps in this script
 # must succeed otherwise bash will abort at the first non-zero error code.  Therefore any script
@@ -87,6 +87,7 @@ REVISION=$TESTING
 
 
 # CMake Options No gdb debug
+
 OPTS="-DBUILD_GITHUB_PLUGIN=ON"  # needed by $STABLE revision
 OPTS_INSTALL_PREFIX="-DCMAKE_INSTALL_PREFIX="
 INSTALL_DIR="/usr/local"
@@ -95,6 +96,9 @@ INSTALL_DIR="/usr/local"
 OPTS_DEBUG="-DCMAKE_BUILD_TYPE=Debug"
 CMAKE_BUILD_TYPE="-DCMAKE_BUILD_TYPE=Release"
 #OPTS_DEBUG=""
+#Disable boost build, on by default
+opt_disable_boost_build="-DKICAD_SKIP_BOOST=ON"
+enable_boost_build=0  # Default dont build boost
 
 # Python scripting, uncomment only one to enable:
 # Basic python scripting: gives access to wizards like footprint wizards (recommended)
@@ -195,6 +199,7 @@ usage()
     echo "      [-D ]                  ( Disable Documents Build )"
     echo "      [-L ]                  ( Disable Parts sch/pcb/3d libs Build )"    
     echo "      [-B ]                  ( Use prebuild doc's,  this save's a lot of time if you only wont to install the docs! )"
+    echo "      [-b ]                  ( Build our own copy of Boost libs )"
     echo "      [-r ]                  ( Build version, Set this to STABLE or TESTING or other known revision number 5054 etc )"
     echo "      [-S ]                  ( Disable SHA512SUM verification )"
     echo "      [-V ]                  ( Disable version check )"
@@ -444,6 +449,9 @@ parse_param()
                 -B  ) # download Prebuild Docs
                     INSTALL_PREBUILD_DOCS=1
                     ;;
+                -b  ) # enable build of boost libs
+                    enable_boost_build=1
+                    ;;
 		-L  ) # Disable Parts sch/pcb/3d libs Build )"    
                     disable_parts_lib_build=1
 		    ;;
@@ -519,6 +527,7 @@ install_prerequisites()
             libbz2-dev
             libcairo2-dev
             libglew-dev
+            libglm-dev
             libssl-dev
             libwxgtk3.0-dev
             wget
@@ -580,6 +589,7 @@ install_prerequisites()
             doxygen
             cairo-devel
             glew-devel
+            glm
             grep
             openssl-devel
             wxGTK3-devel
@@ -715,7 +725,11 @@ install_or_update()
     if [ "$PYTHON" == "MAX" ]; then
 	OPTS="$OPTS $MAX_PYTHON"
     fi
-
+    if [ "$enable_boost_build" == 0 ]; then
+	OPTS="$OPTS $opt_disable_boost_build"
+	echo "disable build"
+    fi
+	 
     OPTS="$OPTS $OPTS_INSTALL_PREFIX$INSTALL_DIR"
 
 	
@@ -899,7 +913,9 @@ install_or_update()
 		fi
 	    fi
 	else
+	    echo ""
 	    echo "step 5) ********* NO DOC'S BUILD ! *********"
+	    echo ""
 	fi
     fi
 
@@ -962,7 +978,9 @@ install_or_update()
 	sudo make install
 	echo " kicad-lib.bzr installed."
     else
-	echo " ********* No libs installed installed ! *********"
+	echo ""
+	echo " ********* No parts Libs installed ! *********"
+	echo ""
     fi
 
     echo "step 9) as non-root, install global fp-lib-table if none already installed..."
@@ -978,7 +996,9 @@ install_or_update()
 	sudo make install
 	echo " kicad-doc.git installed."
     else
-	echo " No Doc's installed!"
+	echo ""
+	echo " ********* No Doc's installed ! *********"
+	echo ""
     fi
     
     echo "step 11) check for environment variables..."
