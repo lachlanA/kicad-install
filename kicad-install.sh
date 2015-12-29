@@ -25,7 +25,7 @@
 #
 # 
 #Note only int, no 1.30.3.. etc or leters for script version#
-SCRIPT_VERSION=10
+SCRIPT_VERSION=11
 # NOTICE: Uncomment if your script depends on bashisms.
 #if [ -z "$BASH_VERSION" ]; then bash $0 $@ ; exit $? ; fi
 
@@ -531,6 +531,7 @@ install_prerequisites()
             libssl-dev
             libwxgtk3.0-dev
             wget
+            curl
        "
 #            texlive-lang-cjk 
 #            texlive-lang-dutch not on debian 8
@@ -594,6 +595,7 @@ install_prerequisites()
             openssl-devel
             wxGTK3-devel
             wget
+            curl
         "
 
         for p in ${prerequisite_list}
