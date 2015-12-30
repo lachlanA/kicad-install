@@ -25,7 +25,7 @@
 #
 # 
 #Note only int, no 1.30.3.. etc or leters for script version#
-SCRIPT_VERSION=11
+SCRIPT_VERSION=12
 # NOTICE: Uncomment if your script depends on bashisms.
 #if [ -z "$BASH_VERSION" ]; then bash $0 $@ ; exit $? ; fi
 
@@ -532,13 +532,15 @@ install_prerequisites()
             libwxgtk3.0-dev
             wget
             curl
+            libcurl4-gnutls-dev
+            libboost-all-dev
        "
 #            texlive-lang-cjk 
 #            texlive-lang-dutch not on debian 8
         for p in ${prerequisite_list}
         do
 	set +e
-            sudo apt-get install "$p" || exit 1
+            sudo apt-get -y install "$p" || exit 1
 	set -e
         done
 
@@ -553,7 +555,7 @@ install_prerequisites()
             for sp in ${scripting_prerequisites}
             do
 		set +e
-                sudo apt-get install "$sp" || exit 1
+                sudo apt-get -y install "$sp" || exit 1
 		set -e
             done
         fi
@@ -568,7 +570,7 @@ install_prerequisites()
         for sp in ${scripting_prerequisites}
         do
 	    set +e
-            sudo apt-get install "$sp"
+            sudo apt-get -y install "$sp"
 	    set -e
         done
 
@@ -596,6 +598,8 @@ install_prerequisites()
             wxGTK3-devel
             wget
             curl
+            libcurl4-gnutls-dev
+            libboost-all-dev
         "
 
         for p in ${prerequisite_list}
