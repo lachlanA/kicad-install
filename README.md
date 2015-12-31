@@ -1,7 +1,7 @@
 # kicad-install
   ***kicad-install.sh bash script script***  
 
-    Version 10 kicad-install.sh script for linux
+    Version 13 kicad-install.sh script for linux
     
     Note: parameters in <> Are required, while parameters in [] are optional, | = OR, IE
 	 one in list  
