@@ -25,7 +25,7 @@
 #
 # 
 #Note only int, no 1.30.3.. etc or leters for script version#
-SCRIPT_VERSION=12
+SCRIPT_VERSION=13
 # NOTICE: Uncomment if your script depends on bashisms.
 #if [ -z "$BASH_VERSION" ]; then bash $0 $@ ; exit $? ; fi
 
@@ -533,6 +533,7 @@ install_prerequisites()
             wget
             curl
             libcurl4-gnutls-dev
+            libcurl4-openssl-dev
             libboost-all-dev
        "
 #            texlive-lang-cjk 
@@ -598,8 +599,9 @@ install_prerequisites()
             wxGTK3-devel
             wget
             curl
-            libcurl4-gnutls-dev
-            libboost-all-dev
+            libcurl4-gnutls-devel
+            libcurl4-openssl-devel
+            libboost-all-devel
         "
 
         for p in ${prerequisite_list}
@@ -885,7 +887,9 @@ install_or_update()
 		cd ../
 	    fi
 	else
-	    echo "step 4) NO PARTS LIBS BUILD!"
+	    echo ""
+	    echo "step 4) ********* NO PARTS LIBS BUILD! *********"
+	    echo ""
 	fi
 	
 	
