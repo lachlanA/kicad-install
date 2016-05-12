@@ -516,6 +516,9 @@ install_prerequisites()
             texlive-lang-italian
             texlive-lang-japanese
             texlive-lang-polish
+            texlive-lang-spanish
+            texlive-lang-cyrillic
+            texlive-lang-german
             bzr
             bzrtools
             build-essential
