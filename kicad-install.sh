@@ -25,7 +25,7 @@
 #
 # 
 #Note only int, no 1.30.3.. etc or leters for script version#
-SCRIPT_VERSION=13
+SCRIPT_VERSION=14
 # NOTICE: Uncomment if your script depends on bashisms.
 #if [ -z "$BASH_VERSION" ]; then bash $0 $@ ; exit $? ; fi
 
@@ -183,8 +183,9 @@ usage()
     echo "                                      only update's if newer Note: Use -V to force update )"
     echo "   --diff-server-local-script      ( Show the difference between current and server scripts"
     echo "                                      $SCRIPT_NAME, using diff, Note: With NO! SHA512SUM verification )"
-    echo "   --make-script-sha512            ( Makes 2 files, one with a SHA512SUM in $working_trees/$SCRIPT_NAME_SHA512SUM other"
-    echo "                                      With SCRIP_VERSION in file $working_trees/$SCRIPT_NAME_VERSION )"
+    echo "   --make-script-sha512            ( Makes 2 files, one with a SHA512SUM in $working_trees/$SCRIPT_NAME_SHA512SUM"
+    echo "                                     Other (use -t to set target directory) With SCRIP_VERSION in file"
+    echo "                                     $working_trees/$SCRIPT_NAME_VERSION )"
     echo "   --clean                         ( Clean build files IE: Frees disk space )"    
     echo "   --delete-build-dir              ( Delete the SOURCE'S/build directory, you may need to do this if"
     echo "                                      build is not working as exepcted )"    
